@@ -1,12 +1,15 @@
 import cv2
 import numpy as np
 
+
 # A required callback method that goes into the trackbar function.
 def nothing(x):
     pass
 
+
 # Load your image instead of using webcam
-image_path = '/Users/user/Desktop/Work/Term 3/Self Driving Cars/Final Project/rob-535-final-project/data/3e8750f331d7499e9b5123e9eb70f2e2_bev.png'  # Replace with the path to your image
+# image_path = '/Users/user/Desktop/Work/Term 3/Self Driving Cars/Final Project/rob-535-final-project/data/3e8750f331d7499e9b5123e9eb70f2e2_bev.png'  # Replace with the path to your image
+image_path = "./data/easy_test.png"
 frame = cv2.imread(image_path)
 if frame is None:
     print("Error: Could not load image. Please check the path.")
@@ -15,8 +18,8 @@ if frame is None:
 # Create a window named trackbars.
 cv2.namedWindow("Trackbars")
 
-# Now create 6 trackbars that will control the lower and upper range of 
-# H,S and V channels. The Arguments are like this: Name of trackbar, 
+# Now create 6 trackbars that will control the lower and upper range of
+# H,S and V channels. The Arguments are like this: Name of trackbar,
 # window name, range, callback function. For Hue the range is 0-179 and
 # for S,V its 0-255.
 cv2.createTrackbar("L - H", "Trackbars", 0, 179, nothing)
@@ -55,7 +58,7 @@ while True:
     stacked = np.hstack((mask_3, frame, res))
 
     # Show this stacked frame at 40% of the size.
-    cv2.imshow('Trackbars', cv2.resize(stacked, None, fx=0.4, fy=0.4))
+    cv2.imshow("Trackbars", cv2.resize(stacked, None, fx=0.4, fy=0.4))
 
     # If the user presses ESC then exit the program
     key = cv2.waitKey(1)
@@ -63,13 +66,13 @@ while True:
         break
 
     # If the user presses `s` then print this array.
-    if key == ord('s'):
+    if key == ord("s"):
         thearray = [[l_h, l_s, l_v], [u_h, u_s, u_v]]
         print(thearray)
 
         # Also save this array as penval.npy
-        np.save('hsv_value', thearray)
+        np.save("hsv_value", thearray)
         break
 
-# Destroy the windows.    
+# Destroy the windows.
 cv2.destroyAllWindows()
