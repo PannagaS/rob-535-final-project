@@ -3,6 +3,16 @@ import casadi as ca
 
 
 def get_bicyce_model_dynamics_function(x_model, u_model, dt):
+    """Generates and returns a Casadi Function which computes the discrete-time dynamics of the bicycle model
+
+    Args:
+        x_model (ca.MX): 4x1 Casadi symbolic of the state
+        u_model (ca.MX): 2x1 Casadi symbolic of the control input
+        dt (float): time step of the dynamics
+
+    Returns:
+        ca.Function: Function which computes discrete time dynamics of the bicycle model
+    """
     # Define front and rear length of car
     L_f = 1.0
     L_r = 1.0
@@ -24,6 +34,16 @@ def get_bicyce_model_dynamics_function(x_model, u_model, dt):
 
 
 def get_stage_cost_function(x_model, u_model, params):
+    """Generates and returns a Casadi Function which computes the stage cost of a state-control pair
+
+    Args:
+        x_model (ca.MX): 4x1 Casadi symbolic of the state
+        u_model (ca.MX): 2x1 Casadi symbolic of the state
+        params (ca.MX): the parameter vector from nmpc_controller
+
+    Returns:
+        ca.Function: Function which computes the stage cost of a state-control pair
+    """
     # Extract parameters: params = [xi, yi, psi_i, vi, xg, yg, vdes, delta_last]'
     pos_des = params[4:6]
     v_des = params[6]
@@ -47,6 +67,15 @@ def get_stage_cost_function(x_model, u_model, params):
 
 
 def get_terminal_cost_function(x_model, params):
+    """Generates and returns a Casadi Function which computes the terminal cost of a state
+
+    Args:
+        x_model (ca.MX): 4x1 Casadi symbolic of the state
+        params (ca.MX): the parameter vector from nmpc_controller
+
+    Returns:
+        ca.Function: Function which computes the terminal cost of a state
+    """
     # Extract parameters: params = [xi, yi, psi_i, vi, xg, yg, vdes, delta_last]'
     pos_des = params[4:6]
     # Define weights
@@ -62,6 +91,17 @@ def get_terminal_cost_function(x_model, params):
 
 
 def get_dynamic_model_constraints(dynamics_func, x, u, N):
+    """Generates list of dynamic model constraints and lists of bounds for those constraints
+
+    Args:
+        dynamics_func (ca.Function): Dynamic model function
+        x (ca.MX): 4x(N+1) Casadi symbolic of all states
+        u (ca.MX): 2xN Casadi symbolic of all controls
+        N (int): Planning horizon in steps
+
+    Returns:
+        tuple: (dynamic model constraints, lower bounds, upper bounds)
+    """
     # Prepare a list for constraints
     cons_dynamics = []
     # Loop through planning horizon
@@ -72,13 +112,26 @@ def get_dynamic_model_constraints(dynamics_func, x, u, N):
         for i in range(x.shape[0]):
             cons_dynamics.append(x[i, k + 1] - xkp1[i])
     # Define bounds to be zero
-    ub_dynamics = np.zeros((x.shape[0] * N, 1))  # TODO: Double check
+    ub_dynamics = np.zeros((x.shape[0] * N, 1))
     lb_dynamics = np.zeros((u.shape[0] * N, 1))
     # Return
     return cons_dynamics, lb_dynamics, ub_dynamics
 
 
 def get_state_constraints(ellipse_coeffs, x, u, params, N, dt):
+    """Generates list of state constraints and lists of bounds for those constraints
+
+    Args:
+        ellipse_coeffs (ndarray): Mx6 array of coefficients for ellipses defining obstacles
+        x (ca.MX): 4x(N+1) Casadi symbolic of all states
+        u (ca.MX): 2xN Casadi symbolic of all controls
+        params (ca.MX): parameter vector from nmpc_controller
+        N (int): Planning horizon in steps
+        dt (float): time step
+
+    Returns:
+        tuple: (state constraints, lower bounds, upper bounds)
+    """
     # Unpack parameters
     delta_last = params[7]
     # Prepare a list for constraints
