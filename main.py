@@ -4,7 +4,7 @@ import casadi as ca
 import matplotlib.pyplot as plt
 
 from helpers import detect_vehicles, obstacles_to_world, bounding_ellipse, plot_ellipses
-from mpc import nmpc_controller
+from mpc import simulate, plot_results
 
 
 def main():
@@ -25,11 +25,22 @@ def main():
     # plt.title("Input Image")
     # plot_ellipses(ellipse_coefs)
     # 5. Run homework 2 clone code with additional obstacles
-    prob, N_mpc, n_x, n_g, n_p, lb_var, ub_var, lb_cons, ub_cons = nmpc_controller(
-        ellipse_coefs
-    )
-    opts = {"ipopt.print_level": 3, "print_time": 0}
-    solver = ca.nlpsol("solver", "ipopt", prob, opts)
+
+    # return
+    parameters = [
+        0,  # x position
+        0,  # y position
+        0,  # heading
+        0,  # velocity
+        4,  # x goal
+        20,  # y goal
+        5,  # v des
+        0,  # delta_last
+    ]
+
+    xlog, ulog = simulate(ellipse_coefs, parameters)
+
+    plot_results(xlog, ulog)
 
 
 if __name__ == "__main__":
