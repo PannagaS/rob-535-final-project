@@ -30,17 +30,19 @@ def main():
     parameters = [
         0,  # x position
         0,  # y position
-        0,  # heading
+        np.pi / 2,  # heading
         0,  # velocity
-        4,  # x goal
-        20,  # y goal
+        -1,  # x goal
+        16,  # y goal
         5,  # v des
         0,  # delta_last
     ]
 
     xlog, ulog = simulate(ellipse_coefs, parameters)
 
-    plot_results(xlog, ulog)
+    traj_fig = plot_results(xlog, ulog, parameters[4:6])
+
+    plot_ellipses(traj_fig, ellipse_coefs)
 
 
 if __name__ == "__main__":

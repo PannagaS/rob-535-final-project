@@ -154,13 +154,13 @@ def bounding_ellipse(rectangles):
     return np.vstack((A, B, C, D, E, F)).T
 
 
-def plot_ellipses(coefs):
+def plot_ellipses(fig, coefs):
     """Helpful visualization tool, plots a set of ellipses gives a matrix of their general-from coefficients
 
     Args:
         coefs (coefs): Nx6 matrix where each row is the coefficients (A, B, C, D, E, F) for one ellipse
     """
-    plt.figure(figsize=(10, 6))
+    plt.figure(fig)
     for i in range(coefs.shape[0]):
         A, B, C, D, E, F = coefs[i, :]
         # Define Q matrix and p vector

@@ -55,12 +55,12 @@ def get_stage_cost_function(x_model, u_model, params):
     # Compute deviation from straight-line path
     d = x_model[:2] - (pos_des.T @ x_model[:2]) / (ca.norm_2(pos_des) ** 2) * pos_des
     # Define weights
-    W = {"psi": 1.0, "d": 1.0, "v": 1.0, "a": 1.0, "delta": 1.0}
+    W = {"psi": 10.0, "d": 10.0, "v": 1.0, "a": 1.0, "delta": 1.0}
     # Compute stage cost
     J_stage = 0
     J_stage += W["psi"] * (psi_des - x_model[2]) ** 2
     J_stage += W["d"] * d.T @ d
-    J_stage += W["v"] * (v_des - x_model[3]) ** 2
+    # J_stage += W["v"] * (v_des - x_model[3]) ** 2
     J_stage += W["a"] * (u_model[0]) ** 2
     J_stage += W["delta"] * (u_model[1]) ** 2
     # Define stage cost function
@@ -82,7 +82,7 @@ def get_terminal_cost_function(x_model, params):
     # Extract parameters: params = [xi, yi, psi_i, vi, xg, yg, vdes, delta_last]'
     pos_des = params[4:6]
     # Define weights
-    W = {"x": 1.0, "y": 1.0}
+    W = {"x": 1000.0, "y": 1000.0}
     # Compute terminal cost
     J_term = 0
     J_term += W["x"] * (pos_des[0] - x_model[0]) ** 2
@@ -143,13 +143,22 @@ def get_state_constraints(ellipse_coeffs, x, u, params, N, dt):
         # Collision avoidance - no barrier function for now
         for A, B, C, D, E, F in ellipse_coeffs:
             # -(Ax^2 + By^2 + Cxy + Dx + Ey + F) <= 0
-            hk = -A * (x[0, k]) ** 2
-            hk -= B * (x[1, k]) ** 2
-            hk -= C * (x[0, k] * x[1, k])
-            hk -= D * (x[0, k])
-            hk -= E * (x[1, k])
-            hk -= F
-            cons_state.append(hk)
+            hk = A * (x[0, k]) ** 2
+            hk += B * (x[1, k]) ** 2
+            hk += C * (x[0, k] * x[1, k])
+            hk += D * (x[0, k])
+            hk += E * (x[1, k])
+            hk += F
+
+            hkp1 = A * (x[0, k + 1]) ** 2
+            hkp1 += B * (x[1, k + 1]) ** 2
+            hkp1 += C * (x[0, k + 1] * x[1, k])
+            hkp1 += D * (x[0, k + 1])
+            hkp1 += E * (x[1, k + 1])
+            hkp1 += F
+
+            gamma = 0.2
+            cons_state.append((1 - gamma) * hk - hkp1)
         # Maximum lateral acceleration
         vy = (x[2, k + 1] - x[2, k]) / dt
         ay = x[3, k] * vy
@@ -207,8 +216,8 @@ def nmpc_controller(ellipse_coeffs):
     J_term_func = get_terminal_cost_function(x_model, params)
 
     # Define state and control bounds
-    state_ub = np.array([1e8, 1e8, np.pi / 2, 1e8])
-    state_lb = np.array([-1e8, -1e8, -np.pi / 2, 0])
+    state_ub = np.array([1e8, 1e8, np.pi, 1e8])
+    state_lb = np.array([-1e8, -1e8, -np.pi, 0])
     ctrl_ub = np.array([4, 0.6])
     ctrl_lb = np.array([-10, -0.6])
 
@@ -374,103 +383,21 @@ def simulate(ellipse_coefs, parameters):
     return xt, ut
 
 
-def plot_results(xt, ut):
-    ### Maximum lateral acceleration ###
-    h = 0.1
-    gmu = 0.5 * 0.6 * 9.81
-    dx = (xt[1:, :] - xt[0:-1, :]) / h
-    ay = dx[:, 2] * xt[0:-1, 3]  # dx[:, 3]
-    ay = np.abs(ay) - gmu
-
+def plot_results(xt, ut, xg):
     ### Plot trajectory ###
     x_w = xt[:, 0]
     y_w = xt[:, 1]
     yaw = xt[:, 2]
-    x0 = np.expand_dims(x_w, 1)
-    y0 = np.expand_dims(y_w, 1)
-    yaw = np.expand_dims(yaw, 1)
-    dx, dy = np.cos(yaw), np.sin(yaw)
-    arrows = np.concatenate((x0, y0, dx, dy), axis=1)[0:50, :]
-    fig, ax = plt.subplots(figsize=(20, 3))
+
+    fig, ax = plt.subplots(figsize=(6, 6))
     ax.plot(x_w[0], y_w[0], "b.", markersize=20)
-    for arrow in arrows:
-        ax.arrow(
-            arrow[0],
-            arrow[1],
-            arrow[2],
-            arrow[3],
-            head_width=0.5,
-            head_length=1,
-            fc="blue",
-            ec="blue",
-        )
+    ax.plot(xg[0], xg[1], "r*", markersize=20)
     ax.plot(x_w, y_w)
     ax.axis("scaled")
     plt.title("Trajectory")
     plt.xlabel("$x(m)$")
     plt.ylabel("$y(m)$")
-    plt.xlim((-50, 50))
-    plt.ylim((-3, 4))
-    # Define ellipse parameters
-    center_x = 0
-    center_y = 0
-    width = 60
-    height = 4
-    color = "red"
-    fill = False
-    # Create an Ellipse object
-    ellipse = Ellipse((center_x, center_y), width, height, color=color, fill=fill)
-    # Add the ellipse to the axis
-    ax.add_patch(ellipse)
-    # Define the vertices of the triangle as a list of (x, y) coordinates
-    vertices = [(2, 0), (-1, 1), (-1, -1)]
-    # Create a Polygon patch using the vertices and add it to the axis
-    triangle = Polygon(vertices, closed=True, fill=True, color="r")
-    ax.add_patch(triangle)
-    # y constrain
-    plt.plot(x_w, 3 * np.ones(x_w.shape), "--", color="black")
-    plt.plot(x_w, -1 * np.ones(x_w.shape), "--", color="black")
-    plt.show()
+    # plt.xlim((-20, 20))
+    # plt.ylim((-30, 30))
 
-    ### Plot x-t figure ###
-    t = np.linspace(0, 17.1, 171)
-    plt.figure(figsize=(20, 3))
-    plt.plot(t, xt[:, 0])
-    plt.grid()
-    plt.xlabel("$Time(s)$")
-    plt.ylabel("$x(m)$")
-    plt.show()
-
-    ### Plot y-t figure ###
-    plt.figure(figsize=(20, 3))
-    plt.plot(t, xt[:, 1])
-    plt.grid()
-    plt.xlabel("$Time(s)$")
-    plt.ylabel("$y(m)$")
-    plt.show()
-
-    ### Plot yaw-t figure ###
-    plt.figure(figsize=(20, 3))
-    plt.plot(t, xt[:, 2])
-    plt.grid()
-    plt.xlabel("$Time(s)$")
-    plt.ylabel("$yaw(rad)$")
-    plt.show()
-
-    ### Plot v-t figure ###
-    plt.figure(figsize=(20, 3))
-    plt.plot(t, xt[:, 3])
-    plt.grid()
-    plt.xlabel("$Time(s)$")
-    plt.ylabel("$velocity(m/s)$")
-    plt.show()
-
-    ### Plot a-t figure ###
-    plt.figure(figsize=(20, 3))
-    plt.plot(t[1:], ay + (0.5 * 0.6 * 9.81))
-    plt.grid()
-    plt.xlabel("$Time(s)$")
-    plt.ylabel("$Lateral\ acc$")
-    plt.plot(t, np.ones(t.shape) * 0.5 * 0.6 * 9.81, "--", color="black")
-    plt.plot(t, -np.zeros(t.shape), "--", color="black")
-    plt.show()
+    return fig
