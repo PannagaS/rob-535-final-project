@@ -48,9 +48,8 @@ def get_stage_cost_function(x_model, u_model, params):
     Returns:
         ca.Function: Function which computes the stage cost of a state-control pair
     """
-    # Extract parameters: params = [xi, yi, psi_i, vi, xg, yg, vdes, delta_last]'
+    # Extract parameters: params = [xi, yi, psi_i, vi, xg, yg, delta_last]'
     pos_des = params[4:6]
-    v_des = params[6]
     # Compute desired heading
     psi_des = ca.arctan2(pos_des[1], pos_des[0])
     # Compute deviation from straight-line path
@@ -61,7 +60,6 @@ def get_stage_cost_function(x_model, u_model, params):
     J_stage = 0
     J_stage += W["psi"] * (psi_des - x_model[2]) ** 2
     J_stage += W["d"] * d.T @ d
-    # J_stage += W["v"] * (v_des - x_model[3]) ** 2
     J_stage += W["a"] * (u_model[0]) ** 2
     J_stage += W["delta"] * (u_model[1]) ** 2
     # Define stage cost function
@@ -80,7 +78,7 @@ def get_terminal_cost_function(x_model, params):
     Returns:
         ca.Function: Function which computes the terminal cost of a state
     """
-    # Extract parameters: params = [xi, yi, psi_i, vi, xg, yg, vdes, delta_last]'
+    # Extract parameters: params = [xi, yi, psi_i, vi, xg, yg, delta_last]'
     pos_des = params[4:6]
     # Define weights
     W = {"x": 1000.0, "y": 1000.0}
@@ -137,7 +135,7 @@ def get_state_constraints(ellipse_coeffs, x, u, params, N, dt):
         tuple: (state constraints, lower bounds, upper bounds)
     """
     # Unpack parameters
-    delta_last = params[7]
+    delta_last = params[6]
     # Prepare a list for constraints
     cons_state = []
     for k in range(N):
@@ -199,9 +197,8 @@ def nmpc_controller(ellipse_coeffs):
     # additional parameters: initial state, target position, desired velocity, previous steering angle
     x_init = ca.MX.sym("x_init", (nx, 1))
     pos_goal = ca.MX.sym("pos_goal", (2, 1))
-    v_des = ca.MX.sym("v_des")
     delta_last = ca.MX.sym("delta_last")
-    params = ca.vertcat(x_init, pos_goal, v_des, delta_last)
+    params = ca.vertcat(x_init, pos_goal, delta_last)
 
     # Define Casadi symbolics for states and controls
     x_model = ca.MX.sym("xm", (nx, 1))  # [x; y; psi; v]
@@ -281,78 +278,48 @@ def nmpc_controller(ellipse_coeffs):
     )
 
 
-def simulate(ellipse_coefs, parameters):
+def simulate(ellipse_coefs, params):
     """
-    parameters: [x, y, yaw, v, x goal, y goal, v des, delta_last]
+    params: [x, y, yaw, v, x goal, y goal, delta_last]
     """
-
-    parameters = np.array(parameters)
-
-    # We define the default evaluation rate and other constants here
+    # Convert params to a numpy array
+    params = np.array(params)
+    # Define time step, simulation length, dimensions of state and control
     dt = 0.1
     N_sim = int(np.ceil(17 / dt))
     nx = 4
     nu = 2
-
-    # define some parameters
-    x_init = ca.MX.sym("x_init", (nx, 1))
-    pos_goal = ca.MX.sym("pos_goal", (2, 1))  # leader car's velocity
-    v_des = ca.MX.sym("v_des")  # desired speed of ego car
-    delta_last = ca.MX.sym("delta_last")  # steering angle at last step
-    par = ca.vertcat(x_init, pos_goal, v_des, delta_last)  # concatenate them
-
     # Continuous dynamics model
     x_model = ca.MX.sym("xm", (nx, 1))
     u_model = ca.MX.sym("um", (nu, 1))
-
-    L_f = 1.0
-    L_r = 1.0
-
-    beta = ca.atan(L_r / (L_r + L_f) * ca.atan(u_model[1]))
-
-    xdot = ca.vertcat(
-        x_model[3] * ca.cos(x_model[2] + beta),
-        x_model[3] * ca.sin(x_model[2] + beta),
-        x_model[3] / L_r * ca.sin(beta),
-        u_model[0],
-    )
-
-    # Discretized dynamics model
-    Fun_dynmaics_dt = ca.Function(
-        "f_dt", [x_model, u_model, par], [xdot * dt + x_model]
-    )
-
+    # Get bicycle model dynamics
+    dynamics_func = get_bicyce_model_dynamics_function(x_model, u_model, dt)
+    # Construct obstacle-aware NMPC policy
     prob, N_mpc, n_x, n_g, n_p, lb_var, ub_var, lb_cons, ub_cons = nmpc_controller(
         ellipse_coefs
     )
-
+    # Set options and construct NLP solver
     opts = {"ipopt.print_level": 0, "print_time": 0}
     solver = ca.nlpsol("solver", "ipopt", prob, opts)
-
     # Extract initial state and previous steering angle
-    x0 = parameters[:4]
-    d_last = parameters[7]
-
+    x0 = params[:4]
+    delta_last = params[6]
     # logger of states
-    xt = np.zeros((N_sim + 1, nx))
-    ut = np.zeros((N_sim, nu))
-
+    xlog = np.zeros((N_sim + 1, nx))
+    ulog = np.zeros((N_sim, nu))
     # Initial guess for warm start
     x0_nlp = np.random.randn(n_x, 1) * 0.01  # np.zeros((n_x, 1))
     lamx0_nlp = np.random.randn(n_x, 1) * 0.01  # np.zeros((n_x, 1))
     lamg0_nlp = np.random.randn(n_g, 1) * 0.01  # np.zeros((n_g, 1))
-
-    xt[0, :] = x0
-
+    # Set initial position
+    xlog[0, :] = x0
     # main loop of simulation
     for k in range(N_sim):
-        xk = xt[k, :]
-
-        # the leader car's velocity and desired velocity will not change in the planning horizon
-        par_nlp = np.concatenate((xk, parameters[4:7], np.array([d_last])))
-
-        # Solve
-        # embed()
+        # Grab current state
+        xk = xlog[k, :]
+        # Construct up-to-date parameter vector for MPC
+        par_nlp = np.concatenate((xk, params[4:6], np.array([delta_last])))
+        # Solve NLP trajectory optimization
         sol = solver(
             x0=x0_nlp,
             lam_x0=lamx0_nlp,
@@ -363,19 +330,20 @@ def simulate(ellipse_coefs, parameters):
             ubg=ub_cons,
             p=par_nlp,
         )
-
+        # Store solution x, lambda, and mu for next iteration warm-start
         x0_nlp = sol["x"].full()
         lamx0_nlp = sol["lam_x"].full()
         lamg0_nlp = sol["lam_g"].full()
+        # Extract control input for current step
+        ulog[k, :] = np.squeeze(sol["x"].full()[0:nu])
+        # Saturate control inputs as necessary
+        ulog[k, 0] = np.clip(ulog[k, 0], -10, 4)
+        ulog[k, 1] = np.clip(ulog[k, 1], -0.6, 0.6)
+        # Store previous steering angle for steering rate calculation
+        delta_last = ulog[k, 1]
+        # Compute next state
+        xkp1 = dynamics_func(xlog[k, :], ulog[k, :])
+        # Store next state
+        xlog[k + 1, :] = np.squeeze(xkp1.full())
 
-        ut[k, :] = np.squeeze(sol["x"].full()[0:nu])
-        d_last = ut[k, 1]
-
-        ut[k, 0] = np.clip(ut[k, 0], -10, 4)
-        ut[k, 1] = np.clip(ut[k, 1], -0.6, 0.6)
-
-        xkp1 = Fun_dynmaics_dt(xt[k, :], ut[k, :], par_nlp)
-
-        xt[k + 1, :] = np.squeeze(xkp1.full())
-
-    return xt, ut
+    return xlog, ulog

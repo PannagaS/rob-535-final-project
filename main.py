@@ -34,9 +34,8 @@ def main():
     # Set initial parameters
     x0 = [0, 0, np.pi / 2, 0]
     x_goal = [4, 46]
-    v_des = 5
     delta_last = 0
-    parameters = x0 + x_goal + [v_des] + [delta_last]
+    parameters = x0 + x_goal + [delta_last]
     # Simulate vehicle trajectory under obstacle-aware NMPC policy
     xlog, ulog = simulate(ellipse_coefs, parameters)
     # Convert path to pixel coordinates
