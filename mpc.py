@@ -282,8 +282,6 @@ def simulate(ellipse_coefs, params):
     """
     params: [x, y, yaw, v, x goal, y goal, delta_last]
     """
-    # Convert params to a numpy array
-    params = np.array(params)
     # Define time step, simulation length, dimensions of state and control
     dt = 0.1
     N_sim = int(np.ceil(17 / dt))
@@ -307,6 +305,7 @@ def simulate(ellipse_coefs, params):
     # logger of states
     xlog = np.zeros((N_sim + 1, nx))
     ulog = np.zeros((N_sim, nu))
+    tlog = np.linspace(0, N_sim * dt, N_sim + 1)
     # Initial guess for warm start
     x0_nlp = np.random.randn(n_x, 1) * 0.01  # np.zeros((n_x, 1))
     lamx0_nlp = np.random.randn(n_x, 1) * 0.01  # np.zeros((n_x, 1))
@@ -346,4 +345,4 @@ def simulate(ellipse_coefs, params):
         # Store next state
         xlog[k + 1, :] = np.squeeze(xkp1.full())
 
-    return xlog, ulog
+    return xlog, ulog, tlog

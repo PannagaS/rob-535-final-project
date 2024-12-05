@@ -143,6 +143,9 @@ def path_to_pix(path_log, ppm, x0, y0):
     Returns:
         ndarray: Nx2 array of pixel frame coordinates
     """
+    # Check if the array is 1D
+    if path_log.ndim == 1:
+        path_log = np.expand_dims(path_log, axis=0)
     # Create homogenous coordinates
     path_log_h = np.hstack((path_log, np.ones((path_log.shape[0], 1))))
     # Transfer to pixel space
@@ -276,4 +279,53 @@ def plot_path_pix(image, path_log_pix, pos_goal_pix):
     plt.legend()
     plt.title("BEV Output with Planned Path")
     plt.axis("off")
-    plt.show()
+
+
+def plot_timeseries(tlog, xlog, ulog):
+    """Plot x, y, psi, v, a, delta vs time
+
+    Args:
+        tlog (ndarray): time array
+        xlog (ndarray): state array
+        ulog (ndarray): control input array
+    """
+    x = xlog[:, 0]
+    y = xlog[:, 1]
+    psi = xlog[:, 2]
+    v = xlog[:, 3]
+    a = ulog[:, 0]
+    delta = ulog[:, 1]
+
+    plt.figure(figsize=(16, 8))
+
+    plt.subplot(2, 3, 1)
+    plt.plot(tlog, x, color="darkorange", linewidth=2)
+    plt.title("X Position (m) vs Time")
+    plt.xlabel("Time (s)")
+
+    plt.subplot(2, 3, 2)
+    plt.plot(tlog, y, color="darkorange", linewidth=2)
+    plt.title("Y Position (m) vs Time")
+    plt.xlabel("Time (s)")
+
+    plt.subplot(2, 3, 3)
+    plt.plot(tlog[:-1], a, color="forestgreen", linewidth=2)
+    plt.xlabel("Time (s)")
+    plt.title("Acceleration (m / s / s) vs Time")
+
+    plt.subplot(2, 3, 4)
+    plt.plot(tlog, np.rad2deg(psi), color="purple", linewidth=2)
+    plt.title("Heading from Horizontal (deg) vs Time")
+    plt.xlabel("Time (s)")
+
+    plt.subplot(2, 3, 5)
+    plt.plot(tlog, v, color="navy", linewidth=2)
+    plt.title("Velocity (m / s) vs Time")
+    plt.xlabel("Time (s)")
+
+    plt.subplot(2, 3, 6)
+    plt.plot(tlog[:-1], np.rad2deg(delta), color="limegreen", linewidth=2)
+    plt.xlabel("Time (s)")
+    plt.title("Steering Angle (deg) vs Time")
+
+    plt.subplots_adjust(wspace=0.5, hspace=0.3)
