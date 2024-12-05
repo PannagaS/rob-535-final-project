@@ -3,6 +3,7 @@ import casadi as ca
 from IPython import embed
 import matplotlib.pyplot as plt
 from matplotlib.patches import Ellipse, Polygon
+from helpers import plot_ellipses
 
 
 def get_bicyce_model_dynamics_function(x_model, u_model, dt):
@@ -157,7 +158,7 @@ def get_state_constraints(ellipse_coeffs, x, u, params, N, dt):
             hkp1 += E * (x[1, k + 1])
             hkp1 += F
 
-            gamma = 0.2
+            gamma = 0.15
             cons_state.append((1 - gamma) * hk - hkp1)
         # Maximum lateral acceleration
         vy = (x[2, k + 1] - x[2, k]) / dt
@@ -216,8 +217,8 @@ def nmpc_controller(ellipse_coeffs):
     J_term_func = get_terminal_cost_function(x_model, params)
 
     # Define state and control bounds
-    state_ub = np.array([1e8, 1e8, np.pi, 1e8])
-    state_lb = np.array([-1e8, -1e8, -np.pi, 0])
+    state_ub = np.array([1e8, 1e8, 10, 1e8])
+    state_lb = np.array([-1e8, -1e8, -10, 0])
     ctrl_ub = np.array([4, 0.6])
     ctrl_lb = np.array([-10, -0.6])
 
@@ -321,14 +322,11 @@ def simulate(ellipse_coefs, parameters):
         "f_dt", [x_model, u_model, par], [xdot * dt + x_model]
     )
 
-    # student controller are constructed here:
     prob, N_mpc, n_x, n_g, n_p, lb_var, ub_var, lb_cons, ub_cons = nmpc_controller(
         ellipse_coefs
     )
-    # students are expected to provide
-    # NLP problem, the problem size (n_x, n_g, n_p), horizon and bounds
 
-    opts = {"ipopt.print_level": 0, "print_time": 0}  # , 'ipopt.sb': 'yes'}
+    opts = {"ipopt.print_level": 0, "print_time": 0}
     solver = ca.nlpsol("solver", "ipopt", prob, opts)
 
     # Extract initial state and previous steering angle
@@ -381,23 +379,3 @@ def simulate(ellipse_coefs, parameters):
         xt[k + 1, :] = np.squeeze(xkp1.full())
 
     return xt, ut
-
-
-def plot_results(xt, ut, xg):
-    ### Plot trajectory ###
-    x_w = xt[:, 0]
-    y_w = xt[:, 1]
-    yaw = xt[:, 2]
-
-    fig, ax = plt.subplots(figsize=(6, 6))
-    ax.plot(x_w[0], y_w[0], "b.", markersize=20)
-    ax.plot(xg[0], xg[1], "r*", markersize=20)
-    ax.plot(x_w, y_w)
-    ax.axis("scaled")
-    plt.title("Trajectory")
-    plt.xlabel("$x(m)$")
-    plt.ylabel("$y(m)$")
-    # plt.xlim((-20, 20))
-    # plt.ylim((-30, 30))
-
-    return fig

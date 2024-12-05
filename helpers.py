@@ -131,6 +131,28 @@ def obstacles_to_world(obstacles, ppm, x0, y0):
     return (centers_world, sizes_world, angles_world, num_obs)
 
 
+def path_to_pix(path_log, ppm, x0, y0):
+    """Convert a path (list of x-y coordinates) from the world frame to the pixel frame
+
+    Args:
+        path_log (ndarray): Nx2 array of world frame coordinates
+        ppm (float): pixels per meter
+        x0 (float): ego vehicle x position
+        y0 (float): ego vehicle y position
+
+    Returns:
+        ndarray: Nx2 array of pixel frame coordinates
+    """
+    # Create homogenous coordinates
+    path_log_h = np.hstack((path_log, np.ones((path_log.shape[0], 1))))
+    # Transfer to pixel space
+    path_log_pix = (world2pix(ppm, x0, y0) @ path_log_h.T).T
+    # Convert to normal coordinates
+    path_log_pix = path_log_pix[:, :2]
+    # Return
+    return path_log_pix
+
+
 def bounding_ellipse(rectangles):
     """Given a rectangle, computes the coefficients of the general form of the smallest ellipse which both (1) shares the  same aspect ratio as the box, and (2) encompasses the box entirely
 
@@ -143,7 +165,7 @@ def bounding_ellipse(rectangles):
     """
     center, size, angle, _ = rectangles
     cx, cy = center[0, :], center[1, :]
-    rx, ry = np.sqrt(2) / 2 * size[0, :], np.sqrt(2) / 2 * size[1, :]
+    rx, ry = np.sqrt(2) / 2 * 2 * size[0, :], np.sqrt(2) / 2 * 2 * size[1, :]
     angle = np.squeeze(angle)
     A = (np.cos(angle) / rx) ** 2 + (np.sin(angle) / ry) ** 2
     B = (np.sin(angle) / rx) ** 2 + (np.cos(angle) / ry) ** 2
@@ -163,38 +185,95 @@ def plot_ellipses(fig, coefs):
     plt.figure(fig)
     for i in range(coefs.shape[0]):
         A, B, C, D, E, F = coefs[i, :]
-        # Define Q matrix and p vector
-        Q = np.array([[A, C / 2], [C / 2, B]])
-        p = np.array([D, E])
 
-        # Solve for the center
-        center = -0.5 * np.linalg.solve(Q, p)
-        x_c, y_c = center
+        def ellipse(x, y):
+            return A * x**2 + B * y**2 + C * x * y + D * x + E * y + F
 
-        # Eigen decomposition for orientation and axes
-        eigenvalues, eigenvectors = np.linalg.eig(Q)
-        axis_lengths = np.sqrt(1 / np.abs(eigenvalues))  # Semi-axis lengths
-        semi_major, semi_minor = np.max(axis_lengths), np.min(axis_lengths)
+        x = np.linspace(-50, 50, 401)
+        y = np.linspace(-50, 50, 401)
+        X, Y = np.meshgrid(x, y)
 
-        # Orientation (angle of rotation)
-        col = 0 if eigenvalues[0] < eigenvalues[1] else 1
-        angle = np.arctan2(eigenvectors[1, col], eigenvectors[0, col]) - np.pi
-        # Generate ellipse points
-        theta = np.linspace(0, 2 * np.pi, 500)
-        x_ellipse = semi_major * np.cos(theta)
-        y_ellipse = semi_minor * np.sin(theta)
+        Z = ellipse(X, Y)
 
-        # Rotate and translate ellipse
-        R = np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
-        ellipse = R @ np.array([x_ellipse, y_ellipse])
-        x_ellipse, y_ellipse = ellipse[0, :] + x_c, ellipse[1, :] + y_c
-
-        # Plot
-        plt.plot(x_ellipse, y_ellipse, label=f"Obstacle {i + 1}")
-        plt.scatter(x_c, y_c, color="red")
+        plt.contour(X, Y, Z, levels=[0], colors="black")
 
     plt.grid()
     plt.axis("equal")
-    plt.legend()
     plt.title("Obstacles in World Coordinates")
+
+
+def plot_path_world(xt, xg, ellipse_coeffs):
+    """Plot path in world frame with ellipse obstacles
+
+    Args:
+        xt (ndarray): Nx4 array of states
+        xg (ndarray, list): Goal point in world frame
+        ellipse_coeffs (ndarray): Matrix of ellipse coefficients
+    """
+    x_w = xt[:, 0]
+    y_w = xt[:, 1]
+
+    fig = plt.figure(figsize=(8, 8))
+    plt.plot(x_w, y_w, color="red", label="Path")
+    plt.plot(
+        x_w[0],
+        y_w[0],
+        color="lime",
+        marker=".",
+        markersize=10,
+        markeredgecolor="k",
+        label="Start",
+    )
+    plt.plot(
+        xg[0],
+        xg[1],
+        color="yellow",
+        marker="*",
+        markersize=10,
+        markeredgecolor="k",
+        label="Goal",
+    )
+    plt.axis("scaled")
+    plt.title("Trajectory")
+    plt.legend()
+    plt.xlabel("$x(m)$")
+    plt.ylabel("$y(m)$")
+
+    plot_ellipses(fig, ellipse_coeffs)
+
+
+def plot_path_pix(image, path_log_pix, pos_goal_pix):
+    """Plot the path on the image
+
+    Args:
+        image (image): Image to be plotted on
+        path_log_pix (ndarray): Nx2 array of path points in pixels
+        pos_goal_pix (ndarray, list): Goal point in pixels
+    """
+    plt.figure(figsize=(8, 8))
+    plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+    plt.plot(
+        path_log_pix[:, 0], path_log_pix[:, 1], linewidth=2, color="red", label="Path"
+    )
+    plt.plot(
+        path_log_pix[0, 0],
+        path_log_pix[0, 1],
+        color="lime",
+        marker=".",
+        markersize=10,
+        markeredgecolor="k",
+        label="Start",
+    )
+    plt.plot(
+        pos_goal_pix[0, 0],
+        pos_goal_pix[0, 1],
+        color="yellow",
+        marker="*",
+        markersize=10,
+        markeredgecolor="k",
+        label="Goal",
+    )
+    plt.legend()
+    plt.title("BEV Output with Planned Path")
+    plt.axis("off")
     plt.show()
