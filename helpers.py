@@ -1,4 +1,5 @@
 import cv2
+import os
 import numpy as np
 import matplotlib.pyplot as plt
 
@@ -244,6 +245,8 @@ def plot_path_world(xt, xg, ellipse_coeffs):
 
     plot_ellipses(fig, ellipse_coeffs)
 
+    return fig
+
 
 def plot_path_pix(image, path_log_pix, pos_goal_pix):
     """Plot the path on the image
@@ -253,7 +256,7 @@ def plot_path_pix(image, path_log_pix, pos_goal_pix):
         path_log_pix (ndarray): Nx2 array of path points in pixels
         pos_goal_pix (ndarray, list): Goal point in pixels
     """
-    plt.figure(figsize=(8, 8))
+    f = plt.figure(figsize=(8, 8))
     plt.imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
     plt.plot(
         path_log_pix[:, 0], path_log_pix[:, 1], linewidth=2, color="red", label="Path"
@@ -280,6 +283,8 @@ def plot_path_pix(image, path_log_pix, pos_goal_pix):
     plt.title("BEV Output with Planned Path")
     plt.axis("off")
 
+    return f
+
 
 def plot_timeseries(tlog, xlog, ulog):
     """Plot x, y, psi, v, a, delta vs time
@@ -296,7 +301,7 @@ def plot_timeseries(tlog, xlog, ulog):
     a = ulog[:, 0]
     delta = ulog[:, 1]
 
-    plt.figure(figsize=(16, 8))
+    f = plt.figure(figsize=(16, 8))
 
     plt.subplot(2, 3, 1)
     plt.plot(tlog, x, color="darkorange", linewidth=2)
@@ -329,3 +334,24 @@ def plot_timeseries(tlog, xlog, ulog):
     plt.title("Steering Angle (deg) vs Time")
 
     plt.subplots_adjust(wspace=0.5, hspace=0.3)
+
+    return f
+
+
+def generate_result_directory(name):
+    """Generate a unique and relevant name to store results in. Resultant name will be of the form '<name><i>'
+    where 'i' is the first available integer, starting at 1
+
+    Args:
+        name (str): base name
+
+    Returns:
+        str: unique name
+    """
+    contents = os.listdir("./results/")
+    index = 1
+    while True:
+        dir_name = name + "_" + str(index)
+        if dir_name not in contents:
+            return dir_name
+        index = index + 1
