@@ -12,12 +12,13 @@ from helpers import (
     plot_path_pix,
     plot_timeseries,
     generate_result_directory,
+    ego_center,
 )
 from mpc import simulate
 
 ### Parameters ###
 image_name = "image3"
-pos_goal = np.array([20, 28])
+pos_goal = np.array([4, 46])
 initial_heading = np.pi / 2
 
 
@@ -25,13 +26,14 @@ def main():
     # Read in image
     image = cv2.imread("./data/" + image_name + ".png")
 
+    # Find starting coordinate
+    ego_vehicle_x, ego_vehicle_y = ego_center(image)
+
     # Extract list of obstacles in image in pixel space
     obstacles_pixel_space = detect_vehicles(image)
 
     # Convert obstacles to world space
     ppm = 30 / 4
-    ego_vehicle_x = 340
-    ego_vehicle_y = 340
     obstacles_world_space = obstacles_to_world(
         obstacles=obstacles_pixel_space,
         ppm=ppm,

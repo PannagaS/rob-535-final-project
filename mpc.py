@@ -156,7 +156,7 @@ def get_state_constraints(ellipse_coeffs, x, u, params, N, dt):
             hkp1 += E * (x[1, k + 1])
             hkp1 += F
 
-            gamma = 0.15
+            gamma = 1
             cons_state.append((1 - gamma) * hk - hkp1)
         # Maximum lateral acceleration
         vy = (x[2, k + 1] - x[2, k]) / dt
@@ -297,7 +297,7 @@ def simulate(ellipse_coefs, params):
         ellipse_coefs
     )
     # Set options and construct NLP solver
-    opts = {"ipopt.print_level": 0, "print_time": 0}
+    opts = {"ipopt.print_level": 1, "print_time": 0}
     solver = ca.nlpsol("solver", "ipopt", prob, opts)
     # Extract initial state and previous steering angle
     x0 = params[:4]
