@@ -156,7 +156,7 @@ def get_state_constraints(ellipse_coeffs, x, u, params, N, dt):
             hkp1 += E * (x[1, k + 1])
             hkp1 += F
 
-            gamma = 1
+            gamma = 0.15
             cons_state.append((1 - gamma) * hk - hkp1)
         # Maximum lateral acceleration
         vy = (x[2, k + 1] - x[2, k]) / dt
