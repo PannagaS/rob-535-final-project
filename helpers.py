@@ -17,8 +17,8 @@ def detect_vehicles(image):
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
 
     # Define range for blue color
-    lower_blue = np.array([102, 174, 82])
-    upper_blue = np.array([121, 255, 255])
+    lower_blue = np.array([98, 174, 0])
+    upper_blue = np.array([129, 255, 255])
 
     # Create a mask for blue areas
     mask = cv2.inRange(hsv, lower_blue, upper_blue)
@@ -41,28 +41,21 @@ def detect_vehicles(image):
     angles = np.empty((0))
 
     for contour in contours:
-        # Approximate the contour
-        epsilon = 0.02 * cv2.arcLength(contour, True)
-        approx = cv2.approxPolyDP(contour, epsilon, True)
+        area = cv2.contourArea(contour)
 
-        # Check if it is a rectangle (4 sides and convex)
-        if len(approx) == 4 and cv2.isContourConvex(approx):
-            # Calculate the area and filter based on minimum area
-            area = cv2.contourArea(contour)
-
-            if area >= 400:
-                # Calculate bounding box of obstacle
-                bounding_box = cv2.minAreaRect(contour)
-                # Extract center, size, and angle of box
-                center, size, angle = bounding_box
-                # Record in lists
-                centers = np.append(
-                    centers, np.array([center[0], center[1]]).reshape((2, 1)), axis=1
-                )
-                sizes = np.append(
-                    sizes, np.array([size[0], size[1]]).reshape((2, 1)), axis=1
-                )
-                angles = np.append(angles, angle)
+        if area >= 350:
+            # Calculate bounding box of obstacle
+            bounding_box = cv2.minAreaRect(contour)
+            # Extract center, size, and angle of box
+            center, size, angle = bounding_box
+            # Record in lists
+            centers = np.append(
+                centers, np.array([center[0], center[1]]).reshape((2, 1)), axis=1
+            )
+            sizes = np.append(
+                sizes, np.array([size[0], size[1]]).reshape((2, 1)), axis=1
+            )
+            angles = np.append(angles, angle)
 
     num_obs = centers.shape[1]
     rectangles = (centers, sizes, angles, num_obs)

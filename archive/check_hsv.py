@@ -9,7 +9,7 @@ def nothing(x):
 
 # Load your image instead of using webcam
 # image_path = '/Users/user/Desktop/Work/Term 3/Self Driving Cars/Final Project/rob-535-final-project/data/3e8750f331d7499e9b5123e9eb70f2e2_bev.png'  # Replace with the path to your image
-image_path = "./data/easy_test.png"
+image_path = "./data/image2.png"
 frame = cv2.imread(image_path)
 if frame is None:
     print("Error: Could not load image. Please check the path.")

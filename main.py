@@ -17,7 +17,7 @@ from helpers import (
 from mpc import simulate
 
 ### Parameters ###
-image_name = "image3"
+image_name = "image2"
 pos_goal = np.array([4, 46])
 initial_heading = np.pi / 2
 
