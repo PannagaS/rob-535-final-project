@@ -318,33 +318,40 @@ def plot_timeseries(tlog, xlog, ulog):
     plt.plot(tlog, x, color="darkorange", linewidth=2)
     plt.title("X Position (m) vs Time")
     plt.xlabel("Time (s)")
+    plt.grid()
 
     plt.subplot(2, 3, 2)
     plt.plot(tlog, y, color="darkorange", linewidth=2)
     plt.title("Y Position (m) vs Time")
     plt.xlabel("Time (s)")
+    plt.grid()
 
     plt.subplot(2, 3, 3)
     plt.plot(tlog[:-1], a, color="forestgreen", linewidth=2)
     plt.xlabel("Time (s)")
     plt.title("Acceleration (m / s / s) vs Time")
+    plt.grid()
 
     plt.subplot(2, 3, 4)
     plt.plot(tlog, np.rad2deg(psi), color="purple", linewidth=2)
     plt.title("Heading from Horizontal (deg) vs Time")
     plt.xlabel("Time (s)")
+    plt.grid()
 
     plt.subplot(2, 3, 5)
     plt.plot(tlog, v, color="navy", linewidth=2)
     plt.title("Velocity (m / s) vs Time")
     plt.xlabel("Time (s)")
+    plt.grid()
 
     plt.subplot(2, 3, 6)
     plt.plot(tlog[:-1], np.rad2deg(delta), color="limegreen", linewidth=2)
     plt.xlabel("Time (s)")
     plt.title("Steering Angle (deg) vs Time")
-
+    plt.grid()
+    
     plt.subplots_adjust(wspace=0.5, hspace=0.3)
+    
 
     return f
 

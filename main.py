@@ -72,6 +72,7 @@ def main():
     plt.figure(bev_plot)
     plt.savefig(os.path.join("results", result_subdir, "bev.png"))
     plt.figure(state_control_plot)
+    
     plt.savefig(os.path.join("results", result_subdir, "state_control.png"))
 
     # Show all plots
