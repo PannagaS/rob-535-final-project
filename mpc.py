@@ -1,9 +1,5 @@
 import numpy as np
 import casadi as ca
-from IPython import embed
-import matplotlib.pyplot as plt
-from matplotlib.patches import Ellipse, Polygon
-from helpers import plot_ellipses
 
 
 def get_bicyce_model_dynamics_function(x_model, u_model, dt):
