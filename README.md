@@ -41,6 +41,6 @@ Of course, in some cases, the planner fails to find a safe path (see `results/im
 
 <img src="./results/image3_5/bev.png" alt="drawing" width="400"/><img src="./results/image3_5/world.png" alt="" width="400"/>
 ## Shortcomings
-It appears to us that the iron-clad guaranty of safety that a single control barrier function provides does not extend to environment where multiple (possibly conflicting) control barrier functions are at play. In the `results/` directory, you can find multiple images like the one below, where the planned path actually clips through an obstacle briefly. Clearly, this is an unacceptable breach of safety. We hope to examine this issue more carefully in the future, and determine if we can formulate a solution.
+It appears to us that the iron-clad guarantee of safety that a single control barrier function provides does not extend to environment where multiple (possibly conflicting) control barrier functions are at play. In the `results/` directory, you can find multiple images like the one below, where the planned path actually clips through an obstacle briefly. Clearly, this is an unacceptable breach of safety. We hope to examine this issue more carefully in the future, and determine if we can formulate a solution.
 
 <img src="./results/image3_1/bev.png" alt="drawing" width="400"/><img src="./results/image3_1/world.png" alt="" width="400"/>
