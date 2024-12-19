@@ -7,6 +7,12 @@ This work builds on BEVFormer &mdash; a state of the art framework for generatin
 - Pannaga Sudarshan ([LinkedIn](https://www.linkedin.com/in/pannaga-sudarshan-98815a15a/), [GitHub](https://github.com/PannagaS))
 
 ## Contents
+Our current program resides in three files:
+- `main.py`: Main file for our program. Reads in output from BEVFormer and runs our planning pipeline.
+- `mpc.py`: Contains all of our code for trajectory optimization with CasADi.
+- `helpers.py`: Containts various helper functions for image processing, coordinate transformations, and plotting results.
+
+And we provide many additional materials:
 - `archive/`: Experimental files we used in prototyping
 - `data/`: Contains outputs from BEVFormer, 2D bird's-eye-view representations of the environment
 - `media/`: Our poster and final report on this project
